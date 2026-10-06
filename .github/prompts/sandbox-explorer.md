@@ -1,56 +1,6 @@
----
-name: "Docker Sandboxes sample: exploratory test"
-
-on:
-  workflow_dispatch:
-
-runs-on: ubuntu-24.04
-
-# The agent's token is read-only. Pull requests are created by a separate safe-output job.
-permissions:
-  contents: read
-  copilot-requests: write
-
-engine: copilot
-
-network:
-  allowed:
-    - defaults
-    - github
-    - containers   # pull container images
-    - java         # Maven Central
-
-# ---- The integration this demo is about -------------------------------------
-# Run the agent inside a Docker Sandbox (sbx) microVM, with its own private
-# Docker daemon, instead of directly on the runner. The compiler adds the
-# privileged setup (root in the sandbox, KVM access), so there is no `sudo` key.
-sandbox:
-  agent:
-    id: awf
-    runtime: docker-sbx
-# ------------------------------------------------------------------------------
-
-tools:
-  edit:
-  bash: [":*"]
-
-safe-outputs:
-  create-pull-request:
-    title-prefix: "[docker-sbx sample] "
-    draft: true
-    protected-files: blocked
-    allowed-files:
-      - "src/**"
----
-
-<!--
-  After editing this file, recompile:  gh aw compile sandbox-explorer
-  and commit the regenerated sandbox-explorer.lock.yml. Never hand-edit the lock file.
--->
-
 # Exploratory tester
 
-You are a bounded exploratory tester for a small Java user-registration service. Work through the steps below in order and keep a short log of each command and its result.
+You are a bounded exploratory tester for a small Java user-registration service. You run inside a Docker Sandbox microVM with your own private Docker daemon. Work through the steps below in order and keep a short log of each command and its result.
 
 ## 1. Record the environment
 
@@ -87,7 +37,7 @@ Run the complete suite again with `./scripts/test-in-docker.sh`.
 
 ## 8. Report
 
-Create exactly one draft pull request containing the regression test and the fix. The description must list the commands you ran and their results.
+Leave your changes uncommitted in the working tree. Do not commit, push, or open a pull request: the pipeline collects your changes and a separate job opens a draft pull request. End with a short summary that lists the commands you ran and their results.
 
 ## Guardrails
 

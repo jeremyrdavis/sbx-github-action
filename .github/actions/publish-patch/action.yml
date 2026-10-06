@@ -1,0 +1,42 @@
+name: Publish an agent patch as a draft pull request
+description: >
+  Validates a patch produced by an untrusted agent (only allowed paths, plain text edits),
+  applies it on a new branch, and opens a draft pull request. Needs a checkout of the
+  base branch and a token that can push and create pull requests.
+
+inputs:
+  patch-file:
+    description: Path to the patch file.
+    required: true
+  agent-log:
+    description: Optional path to the agent log. Its tail is quoted in the PR description.
+    required: false
+    default: ""
+  allowed-prefixes:
+    description: Space-separated path prefixes the patch may touch.
+    required: false
+    default: "src/"
+  title-prefix:
+    description: Prefix for the pull request title.
+    required: false
+    default: ""
+  base-branch:
+    description: Branch the pull request targets.
+    required: true
+  token:
+    description: Token used to push the branch and create the pull request.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate, apply, and open a draft pull request
+      shell: bash
+      env:
+        PATCH_FILE: ${{ inputs.patch-file }}
+        AGENT_LOG: ${{ inputs.agent-log }}
+        ALLOWED_PREFIXES: ${{ inputs.allowed-prefixes }}
+        TITLE_PREFIX: ${{ inputs.title-prefix }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: ${{ github.action_path }}/publish-patch.sh

@@ -1,0 +1,72 @@
+name: Run an agent in a Docker Sandbox
+description: >
+  Installs Docker Sandboxes (sbx), starts a Copilot agent in a microVM with its own
+  Docker daemon, and returns the agent's changes as a patch. The agent gets no write
+  token. Publishing the patch is a separate step.
+
+inputs:
+  prompt-file:
+    description: Path (relative to the workspace) of the file that holds the agent prompt.
+    required: true
+  docker-username:
+    description: Docker Hub username used to log in to sbx.
+    required: true
+  docker-pat:
+    description: Docker Hub personal access token (Read scope is enough).
+    required: true
+  copilot-token:
+    description: >
+      Fine-grained PAT with the Copilot Requests permission and nothing else. It is stored
+      as an sbx secret, so the sandbox never sees the real value.
+    required: true
+  network-preset:
+    description: Local sbx network preset (allow-all, balanced or deny-all). Ignored under organization governance.
+    required: false
+    default: balanced
+  allowed-hosts:
+    description: Extra hosts to allow, separated by commas, spaces or newlines.
+    required: false
+    default: ""
+  agent-timeout-minutes:
+    description: How long the agent may run before it is stopped.
+    required: false
+    default: "20"
+  sbx-version:
+    description: Pin the docker-sbx apt package version. Empty installs the latest.
+    required: false
+    default: ""
+  output-dir:
+    description: Directory for the patch and agent log. Empty uses a folder under the runner temp directory.
+    required: false
+    default: ""
+
+outputs:
+  changed:
+    description: "'true' when the agent changed any files."
+    value: ${{ steps.run.outputs.changed }}
+  output-dir:
+    description: Directory holding changes.patch and agent.log.
+    value: ${{ steps.run.outputs.output-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Docker Sandboxes
+      shell: bash
+      env:
+        SBX_VERSION: ${{ inputs.sbx-version }}
+      run: ${{ github.action_path }}/install-sbx.sh
+
+    - name: Run the agent in a sandbox
+      id: run
+      shell: bash
+      env:
+        DOCKER_USERNAME: ${{ inputs.docker-username }}
+        DOCKER_PAT: ${{ inputs.docker-pat }}
+        COPILOT_TOKEN: ${{ inputs.copilot-token }}
+        PROMPT_FILE: ${{ inputs.prompt-file }}
+        NETWORK_PRESET: ${{ inputs.network-preset }}
+        ALLOWED_HOSTS: ${{ inputs.allowed-hosts }}
+        AGENT_TIMEOUT_MINUTES: ${{ inputs.agent-timeout-minutes }}
+        OUT_DIR: ${{ inputs.output-dir }}
+      run: ${{ github.action_path }}/run-agent.sh

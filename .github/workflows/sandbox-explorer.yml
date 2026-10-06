@@ -1,0 +1,85 @@
+name: "Docker Sandboxes sample: exploratory test"
+
+# Manual trigger only, so it never runs unexpectedly.
+on:
+  workflow_dispatch:
+
+# Nothing by default. Each job asks for exactly what it needs.
+permissions: {}
+
+concurrency:
+  group: sandbox-explorer
+  cancel-in-progress: false
+
+jobs:
+  # The agent job: broad freedom INSIDE a Docker Sandbox microVM, a read-only token OUTSIDE it.
+  agent:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.agent.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run the agent in a Docker Sandbox
+        id: agent
+        uses: ./.github/actions/sbx-agent
+        with:
+          prompt-file: .github/prompts/sandbox-explorer.md
+          docker-username: ${{ secrets.DOCKER_USERNAME }}
+          docker-pat: ${{ secrets.DOCKER_PAT }}
+          copilot-token: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          # Ignored when your Docker organization has governance enabled: the
+          # organization's network rules decide what the sandbox can reach.
+          network-preset: balanced
+          allowed-hosts: |
+            github.com
+            api.github.com
+            *.githubusercontent.com
+            *.githubcopilot.com
+            registry-1.docker.io
+            auth.docker.io
+            production.cloudflare.docker.com
+            repo.maven.apache.org
+            repo1.maven.org
+
+      - name: Upload the patch and agent log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbx-agent-output
+          path: ${{ steps.agent.outputs.output-dir }}
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The publisher job: can write, but runs no agent and no sandbox. It accepts only a
+  # validated patch limited to src/** and always opens a DRAFT pull request.
+  publish:
+    needs: agent
+    if: ${{ needs.agent.outputs.changed == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbx-agent-output
+          path: ${{ runner.temp }}/sbx-agent-output
+
+      - name: Open a draft pull request
+        uses: ./.github/actions/publish-patch
+        with:
+          patch-file: ${{ runner.temp }}/sbx-agent-output/changes.patch
+          agent-log: ${{ runner.temp }}/sbx-agent-output/agent.log
+          allowed-prefixes: src/
+          title-prefix: "[docker-sbx sample] "
+          base-branch: ${{ github.ref_name }}
+          token: ${{ github.token }}
