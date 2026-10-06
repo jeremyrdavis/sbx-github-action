@@ -100,7 +100,16 @@ echo "::group::Network policy"
 sbx policy init "${NETWORK_PRESET}"
 hosts="$(printf '%s' "${ALLOWED_HOSTS}" | tr -s ' \n,' ',' | sed -e 's/^,//' -e 's/,$//')"
 if [[ -n "${hosts}" ]]; then
-  sbx policy allow network "${hosts}"
+  # Under organization governance sbx refuses local allow rules. That is expected, not a
+  # failure: the organization's policy already decides what the sandbox can reach.
+  if allow_output="$(sbx policy allow network "${hosts}" 2>&1)"; then
+    echo "${allow_output}"
+  elif grep -q -i 'managed by your organization' <<< "${allow_output}"; then
+    echo "::notice::Network policy is managed by your Docker organization; the allowed-hosts input was not applied. Make sure the organization's policy allows these hosts: ${hosts}"
+  else
+    echo "${allow_output}" >&2
+    exit 1
+  fi
 fi
 echo "::endgroup::"
 

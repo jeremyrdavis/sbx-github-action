@@ -74,7 +74,7 @@ The `sbx diagnostics` group at the end of the agent step prints `sbx ls`, `sbx p
 
 If the Docker account behind `DOCKER_USERNAME` belongs to an organization with Docker Sandboxes governance:
 
-- **Network:** only organization allow rules grant access. Local allow rules (the `network-preset` and `allowed-hosts` inputs) become inactive, but local deny rules still apply. The organization's policy must allow the destinations in `sandbox-explorer.yml`'s `allowed-hosts` list, or the agent's `docker pull`, Maven and Copilot calls fail. An org policy that allows everything works but doesn't enforce an allowlist. Policies can be scoped to teams, so a CI-only team can have its own.
+- **Network:** only organization allow rules grant access. Local allow rules (the `network-preset` and `allowed-hosts` inputs) become inactive, but local deny rules still apply. `sbx policy allow` then exits with "managed by your organization"; the action treats that as a notice, not a failure. The organization's policy must allow the destinations in `sandbox-explorer.yml`'s `allowed-hosts` list, or the agent's `docker pull`, Maven and Copilot calls fail. An org policy that allows everything works but doesn't enforce an allowlist. Policies can be scoped to teams, so a CI-only team can have its own.
 - **Filesystem:** organization rules control which host paths a sandbox may mount as a workspace. This action mounts only the checked-out repository (clone mode), which lives under the runner's home directory, so a rule like `~/**` should be enough. Unlike the old gh-aw setup, the action itself asks for no `/tmp` or `/usr/local/bin` mounts. That follows the docs and is unconfirmed until the first run, so check the log if a mount is denied.
 - A denied mount shows up as `403 Forbidden: mount policy denied` in the log. List the active rules with `sbx policy ls --wide`.
 
@@ -87,7 +87,7 @@ If the Docker account behind `DOCKER_USERNAME` belongs to an organization with D
 
 ## Known limitations
 
-- **Not yet run end to end.** The pieces were tested separately: `sbx exec` running Copilot with a PAT-backed `github` secret worked on a laptop, and the patch validator and publisher were tested against a local repository. The action as a whole has not been run on a GitHub runner.
+- **Not yet run end to end.** On a hosted `ubuntu-24.04` runner, the sbx install, daemon start, `sbx login` and template pull were seen to work. Before that point, `sbx exec` running Copilot with a PAT-backed `github` secret worked on a laptop, and the patch validator and publisher were tested against a local repository. Sandbox creation, the agent run and the publish job have not yet been seen on a runner.
 - **Approval prompts.** Under sbx's `balanced` and `deny-all` presets, a request that matches no rule asks for human approval, which can't happen in CI. Keep the allowlist complete. If a run stalls, read `sbx policy log` in the diagnostics.
 - **sbx is pre-1.0 and changes quickly.** Behavior here follows the docs for v0.47.
 

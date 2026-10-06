@@ -142,6 +142,8 @@ Use `sbx exec`, not `sbx run`: `sbx run` doesn't pass the agent's output through
 | :-- | :-- |
 | Install step fails: `/dev/kvm is missing` | The runner has no KVM. Run `kvm-probe.yml` and see step 4. |
 | `sbx login` fails | `DOCKER_USERNAME` or `DOCKER_PAT` is wrong, or set in the wrong repo. Re-run `gh secret set`. |
+| `The 'copilot-token' input is empty` (or another input) | The secret doesn't exist in this repository under the name the workflow uses. Check `gh secret list`. |
+| Notice: "Network policy is managed by your Docker organization" | Expected with a governed account. The organization's rules decide network access, and the `allowed-hosts` input is not applied. |
 | `403 Forbidden: mount policy denied` | Your Docker organization's filesystem policy doesn't allow the workspace path. A rule like `~/**` should cover it. Check `sbx policy ls --wide` for the account behind the secret. |
 | Agent fails with `Authentication failed` | `COPILOT_GITHUB_TOKEN` is missing, expired, or lacks the **Copilot Requests** permission, or the account has no Copilot entitlement. Classic `ghp_` tokens are not supported. |
 | Agent step stalls, or an image pull or Maven download fails | The network policy blocks a host. Read `sbx policy log` in the `sbx diagnostics` group, then add the host to `allowed-hosts` (or to your organization's policy). |
