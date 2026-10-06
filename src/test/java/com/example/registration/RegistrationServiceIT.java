@@ -46,4 +46,10 @@ class RegistrationServiceIT {
         assertTrue(service.register("bob@example.com"));
         assertFalse(service.register("bob@example.com"));
     }
+
+    @Test
+    void rejectsCaseVariationDuplicate() {
+        assertTrue(service.register("Alice@example.com"));
+        assertFalse(service.register("alice@example.com"));
+    }
 }
