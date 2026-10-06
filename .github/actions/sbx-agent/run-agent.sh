@@ -9,7 +9,17 @@
 # in $GITHUB_OUTPUT.
 set -euo pipefail
 
-: "${DOCKER_USERNAME:?}" "${DOCKER_PAT:?}" "${COPILOT_TOKEN:?}" "${PROMPT_FILE:?}"
+# A secret that doesn't exist reaches this script as an empty string, so say which input.
+missing=0
+for pair in "docker-username:DOCKER_USERNAME" "docker-pat:DOCKER_PAT" "copilot-token:COPILOT_TOKEN" "prompt-file:PROMPT_FILE"; do
+  input="${pair%%:*}"
+  var="${pair##*:}"
+  if [[ -z "${!var:-}" ]]; then
+    echo "::error::The '${input}' input is empty. If it comes from a secret, check that the secret exists in this repository and that the name in the workflow matches."
+    missing=1
+  fi
+done
+[[ "${missing}" -eq 0 ]] || exit 1
 OUT_DIR="${OUT_DIR:-${RUNNER_TEMP:-/tmp}/sbx-agent-out}"
 NETWORK_PRESET="${NETWORK_PRESET:-balanced}"
 ALLOWED_HOSTS="${ALLOWED_HOSTS:-}"
