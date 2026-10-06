@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 import javax.sql.DataSource;
 
 public class RegistrationService {
@@ -26,7 +27,7 @@ public class RegistrationService {
     public boolean register(String email) {
         try (Connection c = dataSource.getConnection();
                 PreparedStatement ps = c.prepareStatement("INSERT INTO users (email) VALUES (?)")) {
-            ps.setString(1, email);
+            ps.setString(1, normalize(email));
             ps.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -40,13 +41,17 @@ public class RegistrationService {
     public boolean isRegistered(String email) {
         try (Connection c = dataSource.getConnection();
                 PreparedStatement ps = c.prepareStatement("SELECT 1 FROM users WHERE email = ?")) {
-            ps.setString(1, email);
+            ps.setString(1, normalize(email));
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Lookup failed", e);
         }
+    }
+
+    private static String normalize(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     public int count() {
